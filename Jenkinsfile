@@ -45,6 +45,22 @@ pipeline {
             }
         }
 
+        stage('Dependency-Check') {
+            steps {
+                timeout(time: 60, unit: 'MINUTES') {
+                    withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_KEY')]) {
+                        // Policy: fail the build if a dependency has a CVE with CVSS >= 9 (CRITICAL)
+                        sh 'mvn -B org.owasp:dependency-check-maven:12.1.0:check -DnvdApiKey=$NVD_KEY -DdataDirectory=/var/lib/jenkins/dependency-check-data -DautoUpdate=true -DfailBuildOnCVSS=9 -Dformat=HTML'
+                    }
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'target/dependency-check-report.html', allowEmptyArchive: true
+                }
+            }
+        }
+
         stage('Docker Build') {
             steps {
                 sh 'docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} -t ${IMAGE_NAME}:latest .'
