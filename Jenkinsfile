@@ -37,14 +37,29 @@ pipeline {
 
         stage('Trivy Scan') {
             steps {
-                // Report: all HIGH and CRITICAL findings that have a fix available
                 sh 'trivy image --scanners vuln --skip-db-update --skip-java-db-update --timeout 15m --severity HIGH,CRITICAL --ignore-unfixed --format table -o trivy-report.txt ${IMAGE_NAME}:${BUILD_NUMBER}'
-                // Gate: fail the pipeline if a fixable CRITICAL vulnerability exists
                 sh 'trivy image --scanners vuln --skip-db-update --skip-java-db-update --timeout 15m --severity CRITICAL --ignore-unfixed --exit-code 1 ${IMAGE_NAME}:${BUILD_NUMBER}'
             }
             post {
                 always {
                     archiveArtifacts artifacts: 'trivy-report.txt', allowEmptyArchive: true
+                }
+            }
+        }
+
+        stage('Publish to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub',
+                                                  usernameVariable: 'DH_USER',
+                                                  passwordVariable: 'DH_TOKEN')]) {
+                    sh '''
+                        echo "$DH_TOKEN" | docker login -u "$DH_USER" --password-stdin
+                        docker tag ${IMAGE_NAME}:${BUILD_NUMBER} $DH_USER/${IMAGE_NAME}:${BUILD_NUMBER}
+                        docker tag ${IMAGE_NAME}:${BUILD_NUMBER} $DH_USER/${IMAGE_NAME}:latest
+                        docker push $DH_USER/${IMAGE_NAME}:${BUILD_NUMBER}
+                        docker push $DH_USER/${IMAGE_NAME}:latest
+                        docker logout
+                    '''
                 }
             }
         }
