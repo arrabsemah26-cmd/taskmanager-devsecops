@@ -54,7 +54,33 @@ mvn clean test
 
 ## Docker
 
-_To be completed (Phase 3)._
+The image is based on `eclipse-temurin:17-jre-alpine` (official, minimal, JRE only) and runs the application as a non-root user (`spring`).
+
+Build the jar, then the image:
+
+```bash
+mvn clean package
+docker build -t taskmanager:1.0 .
+```
+
+Run the container (host port 9090 mapped to container port 8080):
+
+```bash
+docker run -d --name taskmanager -p 9090:8080 taskmanager:1.0
+```
+
+Check it:
+
+```bash
+curl http://localhost:9090/actuator/health
+docker exec taskmanager whoami   # prints: spring
+```
+
+Stop and remove it:
+
+```bash
+docker stop taskmanager && docker rm taskmanager
+```
 
 ## Kubernetes deployment
 
