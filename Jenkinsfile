@@ -34,5 +34,19 @@ pipeline {
                 sh 'docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} -t ${IMAGE_NAME}:latest .'
             }
         }
+
+        stage('Trivy Scan') {
+            steps {
+                // Report: all HIGH and CRITICAL findings that have a fix available
+                sh 'trivy image --severity HIGH,CRITICAL --ignore-unfixed --format table -o trivy-report.txt ${IMAGE_NAME}:${BUILD_NUMBER}'
+                // Gate: fail the pipeline if a fixable CRITICAL vulnerability exists
+                sh 'trivy image --severity CRITICAL --ignore-unfixed --exit-code 1 ${IMAGE_NAME}:${BUILD_NUMBER}'
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'trivy-report.txt', allowEmptyArchive: true
+                }
+            }
+        }
     }
 }
