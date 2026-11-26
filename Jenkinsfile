@@ -5,6 +5,10 @@ pipeline {
         timestamps()
     }
 
+    triggers {
+        pollSCM('H/2 * * * *')
+    }
+
     environment {
         JAVA_HOME = "/usr/lib/jvm/java-17-openjdk-amd64"
         PATH = "${JAVA_HOME}/bin:/usr/local/src/maven/bin:${env.PATH}"
@@ -106,6 +110,24 @@ pipeline {
                         kubectl rollout status deployment/taskmanager --timeout=300s
                         kubectl get pods
                     '''
+                }
+            }
+        }
+        stage('OWASP ZAP Scan') {
+            steps {
+                sh '''
+                    NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+                    mkdir -p zap-reports
+                    chmod 777 zap-reports
+                    docker run --rm --network minikube \
+                        -v $(pwd)/zap-reports:/zap/wrk:rw \
+                        ghcr.io/zaproxy/zaproxy:stable \
+                        zap-baseline.py -t http://$NODE_IP:30080/api/tasks -r zap-report.html -I
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'zap-reports/zap-report.html', allowEmptyArchive: true
                 }
             }
         }
