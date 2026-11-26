@@ -95,5 +95,19 @@ pipeline {
                 }
             }
         }
+        stage('Deploy to Minikube') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub',
+                                                  usernameVariable: 'DH_USER',
+                                                  passwordVariable: 'DH_TOKEN')]) {
+                    sh '''
+                        kubectl apply -f k8s/service.yaml
+                        sed "s|image: .*|image: $DH_USER/${IMAGE_NAME}:${BUILD_NUMBER}|" k8s/deployment.yaml | kubectl apply -f -
+                        kubectl rollout status deployment/taskmanager --timeout=300s
+                        kubectl get pods
+                    '''
+                }
+            }
+        }
     }
 }
