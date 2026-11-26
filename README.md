@@ -84,7 +84,25 @@ docker stop taskmanager && docker rm taskmanager
 
 ## Kubernetes deployment
 
-_To be completed (Phase 4)._
+Manifests are in the `k8s/` folder: a Deployment (1 replica, liveness/readiness probes on the Actuator endpoints, CPU/memory requests and limits, non-root security context) and a NodePort Service on port 30080.
+
+Start Minikube and load the image (until the pipeline pushes to Docker Hub):
+
+```bash
+minikube start --driver=docker --cpus=2 --memory=3072
+minikube image load taskmanager:1.0
+```
+
+Deploy and check:
+
+```bash
+kubectl apply -f k8s/
+kubectl rollout status deployment/taskmanager
+kubectl get pods
+curl http://$(minikube ip):30080/actuator/health
+```
+
+Note: the application uses an in-memory H2 database, so it runs with a single replica and data is lost when the pod restarts.
 
 ## CI/CD pipeline
 
