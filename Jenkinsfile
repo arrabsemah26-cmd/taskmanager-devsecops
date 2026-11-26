@@ -6,7 +6,8 @@ pipeline {
     }
 
     environment {
-        PATH = "/usr/local/src/maven/bin:${env.PATH}"
+        JAVA_HOME = "/usr/lib/jvm/java-17-openjdk-amd64"
+        PATH = "${JAVA_HOME}/bin:/usr/local/src/maven/bin:${env.PATH}"
     }
 
     stages {
